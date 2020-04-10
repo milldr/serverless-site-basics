@@ -1,0 +1,92 @@
+# Deploy a resources for static site
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  SiteName:
+    Default: "millermaskproject.com"
+    Type: String
+  AcmCertArn:
+    Default: "arn:aws:acm:us-east-1:437357098352:certificate/cc7bb438-294b-4170-8270-f8478ea90c9a" # created in console
+    Type: String
+  HostedzoneID: 
+    Default: Z2FDTNDATAQYW2 # This is always the hosted zone ID when you create an alias record that routes traffic to a CloudFront distribution.
+    Type: String
+Resources:
+  StaticContent:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref SiteName
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: 404.html
+  WWWContent:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "www.${ SiteName }"
+      AccessControl: BucketOwnerFullControl
+      WebsiteConfiguration:
+        RedirectAllRequestsTo:
+          HostName: !Ref StaticContent
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Sid: PolicyForStaticSite
+          Effect: Allow
+          Principal:
+            CanonicalUser: !GetAtt CloudfrontOriginAccessIdentity.S3CanonicalUserId
+          Action: "s3:GetObject"
+          Resource: !Sub "arn:aws:s3:::${ SiteName }/*"
+      Bucket: !Ref StaticContent
+  CloudfrontDistro:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+        - DomainName: !GetAtt StaticContent.DomainName
+          Id: S3Origin
+          S3OriginConfig: 
+            OriginAccessIdentity:
+              !Sub "origin-access-identity/cloudfront/${ CloudfrontOriginAccessIdentity }"
+        Enabled: true
+        HttpVersion: 'http2'
+        DefaultRootObject: index.html
+        Aliases:
+          - !Sub "www.${ SiteName }"
+          - !Sub "${ SiteName }"
+        DefaultCacheBehavior:
+          AllowedMethods:
+          - GET
+          - HEAD
+          Compress: true
+          TargetOriginId: S3Origin
+          ForwardedValues:
+            QueryString: true
+            Cookies:
+              Forward: all
+          ViewerProtocolPolicy: redirect-to-https
+        PriceClass: PriceClass_All
+        ViewerCertificate:
+          AcmCertificateArn: !Ref AcmCertArn
+          SslSupportMethod: sni-only
+    DependsOn:
+      - StaticContent
+      - WWWContent
+      - BucketPolicy
+  CloudfrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub 'CloudFront OAI for ${ SiteName}'
+  Dns:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      Comment: !Sub "Cloudfront DNS for ${ SiteName }"
+      HostedZoneName: !Sub "${ SiteName }."
+      RecordSets:
+      - Name: !Sub "${ SiteName }"
+        Type: A
+        AliasTarget:
+          HostedZoneId: !Ref HostedzoneID
+          DNSName: !GetAtt CloudfrontDistro.DomainName

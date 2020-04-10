@@ -1,0 +1,33 @@
+name: Build
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+    paths:
+      - 'aws/**'
+      - '.github/workflows/build-aws.yml'
+jobs:
+  deploy-stack:
+    runs-on: ubuntu-latest
+    container: milldr/static-site-deployer
+    steps:
+      - 
+        name: checkout
+        uses: actions/checkout@master
+      - 
+        name: "Validate Cloudformation"
+        run: |
+          cfn_nag_scan --input-path aws/static-site.yml
+      - 
+        name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+      - 
+        name: "Deploy or update stack"
+        run: |
+          aws cloudformation deploy --template-file aws/static-site.yml --stack-name millermaskproject --capabilities CAPABILITY_NAMED_IAM

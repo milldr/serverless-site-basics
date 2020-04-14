@@ -8,7 +8,7 @@ Add the following to `config.toml` for S3 build and deployment. Change region an
 order = [".png$", ".jpg$", ".gif$", ".svg$"]
 
 [[deployment.targets]]
-URL = "s3://mystaticsite?region=us-west-2"
+URL = "s3://mystaticsite.com?region=us-west-2"
 
 [[deployment.matchers]]
 # Cache static assets for 20 years. should be good

@@ -2,7 +2,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   SiteName:
-    Default: "{{cookiecutter.name}}"
+    Default: "mystaticsite.com"
     Type: String
   AcmCertArn:
     Default: "arn:aws:acm:us-east-1:437357098352:certificate/cc7bb438-294b-4170-8270-f8478ea90c9a" # created in console

@@ -5,7 +5,7 @@ Parameters:
     Default: "mystaticsite.com"
     Type: String
   AcmCertArn:
-    Default: "arn:aws:acm:us-east-1:437357098352:certificate/cc7bb438-294b-4170-8270-f8478ea90c9a" # created in console
+    Default: "arn:aws:acm:us-east-1:000000000000:certificate/put-your-arn-here" # created in console
     Type: String
   HostedzoneID: 
     Default: Z2FDTNDATAQYW2 # This is always the hosted zone ID when you create an alias record that routes traffic to a CloudFront distribution.
@@ -19,14 +19,6 @@ Resources:
       WebsiteConfiguration:
         IndexDocument: index.html
         ErrorDocument: 404.html
-  WWWContent:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub "www.${ SiteName }"
-      AccessControl: BucketOwnerFullControl
-      WebsiteConfiguration:
-        RedirectAllRequestsTo:
-          HostName: !Ref StaticContent
   BucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -43,6 +35,7 @@ Resources:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
+        Comment: !Sub 'CloudFront Distribution for ${ SiteName }'
         Origins:
         - DomainName: !GetAtt StaticContent.DomainName
           Id: S3Origin
@@ -72,13 +65,12 @@ Resources:
           SslSupportMethod: sni-only
     DependsOn:
       - StaticContent
-      - WWWContent
       - BucketPolicy
   CloudfrontOriginAccessIdentity:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
       CloudFrontOriginAccessIdentityConfig:
-        Comment: !Sub 'CloudFront OAI for ${ SiteName}'
+        Comment: !Sub 'CloudFront OAI for ${ SiteName }'
   Dns:
     Type: AWS::Route53::RecordSetGroup
     Properties:

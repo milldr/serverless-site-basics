@@ -6,20 +6,16 @@ on:
     tags-ignore:
       - '**'
     paths:
-      - 'aws/**'
-      - '.github/workflows/build-aws.yml'
+      - 'mystaticsite/**'
 jobs:
-  deploy-stack:
+  deploy-content:
     runs-on: ubuntu-latest
     container: milldr/static-site-deployer
     steps:
-      - 
-        name: checkout
-        uses: actions/checkout@master
-      - 
-        name: "Validate Cloudformation"
-        run: |
-          cfn_nag_scan --input-path aws/static-site.yml
+      - uses: actions/checkout@v2
+        with:
+          submodules: true  # Fetch Hugo themes
+          fetch-depth: 0    # Fetch all history for .GitInfo and .Lastmod
       - 
         name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -28,6 +24,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
       - 
-        name: "Deploy or update stack"
-        run: |
-          aws cloudformation deploy --template-file aws/static-site.yml --stack-name millermaskproject --capabilities CAPABILITY_NAMED_IAM
+        name: "Deploy static content to S3 with Hugo"
+        run: |  
+          cd ./mystaticsite
+          hugo -D
+          hugo -v deploy --maxDeletes 1000

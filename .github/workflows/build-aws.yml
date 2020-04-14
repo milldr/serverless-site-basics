@@ -6,16 +6,19 @@ on:
     tags-ignore:
       - '**'
     paths:
-      - 'millermaskproject/**'
-      - '.github/workflows/build-content.yml'
+      - 'aws/**'
 jobs:
-  deploy-content:
+  deploy-stack:
     runs-on: ubuntu-latest
     container: milldr/static-site-deployer
     steps:
       - 
         name: checkout
         uses: actions/checkout@master
+      - 
+        name: "Validate Cloudformation"
+        run: |
+          cfn_nag_scan --input-path aws/static-site.yml
       - 
         name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -24,9 +27,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-west-2
       - 
-        name: "Deploy static content to S3 with Hugo"
+        name: "Deploy or update stack"
         run: |
-          eval $(~/.linuxbrew/bin/brew shellenv)
-          cd ./millermaskproject
-          hugo -D
-          hugo -v deploy --maxDeletes -1
+          aws cloudformation deploy --template-file aws/static-site.yml --stack-name mystaticsite --capabilities CAPABILITY_NAMED_IAM

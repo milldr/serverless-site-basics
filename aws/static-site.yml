@@ -1,11 +1,12 @@
-# Deploy a resources for static site
+# Deploy resources for static site
+#
+# Note: For the first deployment, AWS requires that you manually add the CNAME for the new ACM Cert to your domain. 
+# "When you use the AWS::CertificateManager::Certificate resource in an AWS CloudFormation stack, the stack will remain in the CREATE_IN_PROGRESS state. Further stack operations will be delayed until you validate the certificate request, either by acting upon the instructions in the validation email, or by adding a CNAME record to your DNS configuration."
+#
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   SiteName:
-    Default: "mystaticsite.com"
-    Type: String
-  AcmCertArn:
-    Default: "arn:aws:acm:us-east-1:000000000000:certificate/put-your-arn-here" # created in console
+    Default: "mystaticsite"
     Type: String
   HostedzoneID: 
     Default: Z2FDTNDATAQYW2 # This is always the hosted zone ID when you create an alias record that routes traffic to a CloudFront distribution.
@@ -31,6 +32,18 @@ Resources:
           Action: "s3:GetObject"
           Resource: !Sub "arn:aws:s3:::${ SiteName }/*"
       Bucket: !Ref StaticContent
+  AcmCert:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: !Ref SiteName
+      SubjectAlternativeNames: 
+          - !Sub "www.${ SiteName }"
+      ValidationMethod: DNS
+  CloudfrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub 'CloudFront OAI for ${ SiteName }'
   CloudfrontDistro:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -61,16 +74,13 @@ Resources:
           ViewerProtocolPolicy: redirect-to-https
         PriceClass: PriceClass_All
         ViewerCertificate:
-          AcmCertificateArn: !Ref AcmCertArn
+          AcmCertificateArn: !Ref AcmCert
           SslSupportMethod: sni-only
     DependsOn:
       - StaticContent
       - BucketPolicy
-  CloudfrontOriginAccessIdentity:
-    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
-    Properties:
-      CloudFrontOriginAccessIdentityConfig:
-        Comment: !Sub 'CloudFront OAI for ${ SiteName }'
+      - CloudfrontOriginAccessIdentity
+      - AcmCert
   Dns:
     Type: AWS::Route53::RecordSetGroup
     Properties:
@@ -82,3 +92,4 @@ Resources:
         AliasTarget:
           HostedZoneId: !Ref HostedzoneID
           DNSName: !GetAtt CloudfrontDistro.DomainName
+

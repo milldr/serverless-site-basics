@@ -6,7 +6,7 @@
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:
   SiteName:
-    Default: "mystaticsite"
+    Default: "mystaticsite.com"
     Type: String
   HostedzoneID: 
     Default: Z2FDTNDATAQYW2 # This is always the hosted zone ID when you create an alias record that routes traffic to a CloudFront distribution.
